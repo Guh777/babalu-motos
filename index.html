@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agendamento Babalu Motos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Roboto', Arial, sans-serif; margin: 0; background: #121212; color: #f5f5f5; }
+    .logo-wrapper { position: fixed; top: 0; left: 0; width: 100%; height: 120px; background-color: #000; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); border-bottom: 3px solid #D32F2F; }
+    .logo-wrapper.scrolled { justify-content: flex-start; padding-left: 20px; background-color: transparent; border-bottom: none; }
+    .logo-wrapper img { max-width: 120px; height: auto; transition: all 0.4s ease; }
+    main { max-width: 500px; margin: 150px auto 60px auto; background: #1e1e1e; padding: 35px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.5); border-top: 5px solid #388E3C; }
+    label { display: block; margin-top: 15px; font-weight: 700; color: #f5f5f5; }
+    input, textarea, select { width: 100%; padding: 12px 15px; margin-top: 8px; border: 2px solid #555; border-radius: 8px; box-sizing: border-box; font-size: 15px; background: #121212; color: #f5f5f5; transition: border 0.3s, background 0.3s; }
+    input:focus, textarea:focus, select:focus { border-color: #388E3C; background: #1e1e1e; outline: none; }
+    button { margin-top: 25px; width: 100%; padding: 15px; background: #D32F2F; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: 700; cursor: pointer; transition: background 0.3s, transform 0.2s; }
+    button:hover { background: #388E3C; transform: translateY(-2px); }
+    .success { color: #388E3C; margin-top: 20px; text-align: center; font-weight: bold; font-size: 16px; }
+    #whatsappLink { display:block; margin-top:15px; text-align:center; background:#25D366; color:white; text-decoration:none; padding:12px; border-radius:8px; font-weight:bold; }
+    @media(max-width:600px){ main { margin: 100px 15px 40px 15px; padding: 25px; } .logo-wrapper img { max-width: 100px; } }
+  </style>
+</head>
+<body>
+
+<div class="logo-wrapper" id="logoWrapper">
+  <img src="./imagens/logo.png" alt="Logo Babalu Motos" />
+</div>
+
+<main>
+  <form id="agendamentoForm">
+    <label for="nome">Nome:</label>
+    <input type="text" id="nome" name="nome" required />
+
+    <label for="telefone">Telefone/WhatsApp:</label>
+    <input type="tel" id="telefone" name="telefone" required />
+
+    <label for="veiculo">Veículo:</label>
+    <input type="text" id="veiculo" name="veiculo" required />
+
+    <label for="tipoServico">Tipo de Serviço:</label>
+    <select id="tipoServico" name="tipoServico" required>
+      <option value="Lavagem">Lavagem</option>
+      <option value="Mecânica">Mecânica</option>
+    </select>
+
+    <div id="descricaoDiv" style="display: none;">
+      <label for="descricao">Descreva o problema:</label>
+      <textarea id="descricao" name="descricao" rows="3"></textarea>
+    </div>
+
+    <label for="data">Data Preferida:</label>
+    <input type="date" id="data" name="data" required />
+
+    <label for="hora">Hora Preferida:</label>
+    <input type="time" id="hora" name="hora" required />
+
+    <button type="submit">Agendar</button>
+    <p class="success" id="successMessage" style="display: none;"></p>
+    <a id="whatsappLink" href="#" target="_blank" style="display:none;">Enviar para WhatsApp</a>
+  </form>
+</main>
+
+<script>
+const form = document.getElementById('agendamentoForm');
+const successMessage = document.getElementById('successMessage');
+const tipoServico = document.getElementById('tipoServico');
+const descricaoDiv = document.getElementById('descricaoDiv');
+const logoWrapper = document.getElementById('logoWrapper');
+const whatsappLink = document.getElementById('whatsappLink');
+
+// Mostrar/ocultar campo de descrição
+tipoServico.addEventListener('change', function () {
+  if (this.value === 'Mecânica') {
+    descricaoDiv.style.display = 'block';
+    descricaoDiv.querySelector('textarea').required = true;
+  } else {
+    descricaoDiv.style.display = 'none';
+    descricaoDiv.querySelector('textarea').required = false;
+  }
+});
+
+// Envio do formulário
+form.addEventListener('submit', function (e) {
+  e.preventDefault();
+
+  const dados = {
+    nome: document.getElementById('nome').value,
+    telefone: document.getElementById('telefone').value,
+    veiculo: document.getElementById('veiculo').value,
+    tipo_servico: document.getElementById('tipoServico').value,
+    descricao: document.getElementById('descricao').value,
+    data: document.getElementById('data').value,
+    hora: document.getElementById('hora').value
+  };
+
+  fetch('http://localhost:3000/agendar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      successMessage.textContent = data.message;
+      successMessage.style.display = 'block';
+      form.reset();
+      descricaoDiv.style.display = 'none';
+
+      // Atualizar link do WhatsApp
+      whatsappLink.href = data.whatsapp;
+      whatsappLink.style.display = 'block';
+    } else {
+      alert(data.error || 'Erro ao agendar');
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert('Erro na comunicação com o servidor');
+  });
+});
+
+// Efeito scroll
+window.addEventListener('scroll', function () {
+  if (window.scrollY > 20) logoWrapper.classList.add('scrolled');
+  else logoWrapper.classList.remove('scrolled');
+});
+</script>
+
+</body>
+</html>
