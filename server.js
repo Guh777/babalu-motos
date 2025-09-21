@@ -4,20 +4,17 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Fly.io usa variável de ambiente
+const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({ origin: "*" }));
+app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // Serve arquivos estáticos (frontend, imagens)
+app.use(express.static(path.join(__dirname))); // Serve frontend e imagens
 
 // Banco de dados SQLite
 const db = new sqlite3.Database(path.join(__dirname, 'agendamentos.db'), (err) => {
-  if (err) {
-    console.error('Erro ao conectar ao banco de dados:', err.message);
-  } else {
-    console.log('Conectado ao banco SQLite.');
-  }
+  if (err) console.error('Erro ao conectar ao banco:', err.message);
+  else console.log('Conectado ao SQLite');
 });
 
 // Criar tabela se não existir
@@ -34,7 +31,7 @@ db.run(`
   )
 `);
 
-// Número do WhatsApp do dono (com código do país)
+// Número do WhatsApp do dono
 const telefoneDono = '5521974438039';
 
 // Função para gerar link do WhatsApp
@@ -65,28 +62,17 @@ app.post('/agendar', (req, res) => {
     return res.status(400).json({ success: false, error: 'Campos obrigatórios faltando.' });
   }
 
-  // Verificar quantos agendamentos existem para o dia selecionado
   db.all(`SELECT COUNT(*) as count FROM agendamentos WHERE data = ?`, [data], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ success: false, error: 'Erro no banco de dados.' });
-    }
+    if (err) return res.status(500).json({ success: false, error: 'Erro no banco de dados.' });
 
     const count = rows[0].count;
+    if (count >= 3) return res.status(400).json({ success: false, error: 'Limite diário de 3 motos atingido para esta data.' });
 
-    if (count >= 3) {
-      return res.status(400).json({ success: false, error: 'Limite diário de 3 motos atingido para esta data.' });
-    }
-
-    // Inserir agendamento
     db.run(
       `INSERT INTO agendamentos (nome, telefone, veiculo, tipo_servico, descricao, data, hora) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [nome, telefone, veiculo, tipo_servico, descricao || '', data, hora],
       function (err) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ success: false, error: 'Erro ao salvar agendamento.' });
-        }
+        if (err) return res.status(500).json({ success: false, error: 'Erro ao salvar agendamento.' });
 
         const linkWhatsApp = gerarLinkWhatsApp({ nome, telefone, veiculo, tipo_servico, descricao, data, hora });
         return res.json({ success: true, message: `Agendamento confirmado para ${data} às ${hora}`, whatsapp: linkWhatsApp });
@@ -95,21 +81,24 @@ app.post('/agendar', (req, res) => {
   });
 });
 
-// Rota para listar datas já cheias
+// Rota para datas cheias
 app.get('/datas-cheias', (req, res) => {
   db.all(
     `SELECT data, COUNT(*) as count FROM agendamentos GROUP BY data HAVING count >= 3`,
     [],
     (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ success: false, error: 'Erro no banco de dados.' });
-      }
+      if (err) return res.status(500).json({ success: false, error: 'Erro no banco de dados.' });
       res.json({ success: true, datas: rows.map(r => r.data) });
     }
   );
 });
 
+// Serve index.html para qualquer outra rota
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Start do servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
