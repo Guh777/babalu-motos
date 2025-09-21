@@ -4,11 +4,12 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // Fly.io usa variável de ambiente
 
 // Middleware
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+app.use(express.static(path.join(__dirname))); // Serve arquivos estáticos (frontend, imagens)
 
 // Banco de dados SQLite
 const db = new sqlite3.Database(path.join(__dirname, 'agendamentos.db'), (err) => {

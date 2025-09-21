@@ -24,7 +24,7 @@
 <body>
 
 <div class="logo-wrapper" id="logoWrapper">
-  <img src="./imagens/logo.png" alt="Logo Babalu Motos" />
+  <img src="imagens/logo.png" alt="Logo Babalu Motos" />
 </div>
 
 <main>
@@ -94,11 +94,11 @@ form.addEventListener('submit', function (e) {
     hora: document.getElementById('hora').value
   };
 
-  fetch('http://localhost:3000/agendar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(dados)
-  })
+fetch('/agendar', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(dados)
+})
   .then(res => res.json())
   .then(data => {
     if (data.success) {
